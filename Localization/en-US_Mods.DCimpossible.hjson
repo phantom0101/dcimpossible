@@ -1,0 +1,6 @@
+NPCs.CataclysmicDeity.DisplayName: Cataclysmic Deity
+
+Projectiles: {
+	LavaRainDrop.DisplayName: Lava Rain Drop
+	LavaTsunamiWave.DisplayName: Lava Tsunami Wave
+}

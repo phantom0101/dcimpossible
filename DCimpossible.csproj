@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!-- Import tModLoader mod properties -->
+	<Import Project="..\tModLoader.targets" />
+
+	<!-- General -->
+	<PropertyGroup>
+		<StartAction>Program</StartAction>
+		<StartProgram>dotnet.exe</StartProgram>
+		<StartArguments>tModLoader.dll</StartArguments>
+		<StartWorkingDirectory>D:\Steam\steamapps\common\tModLoader</StartWorkingDirectory>
+	</PropertyGroup>
+
+	<!-- References -->
+	<ItemGroup>
+		
+	</ItemGroup>
+
+</Project>

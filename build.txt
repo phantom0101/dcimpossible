@@ -1,0 +1,3 @@
+displayName = Discord impossible
+author = Phantom101
+version = 0.1
