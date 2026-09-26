@@ -76,15 +76,26 @@ namespace DCimpossible.Common.Players
 			}
 
 			// Feature 11: Every 5 minutes a random inventory item drops (entire stack)
-			DropTimer++;
-			if (DropTimer >= DropIntervalTicks)
+			// Server-authoritative: only runs on server or in singleplayer.
+			// In multiplayer, the server simulates all players so this fires once
+			// per player per interval — not once per client per player.
+			if (Main.netMode != NetmodeID.MultiplayerClient)
 			{
-				DropTimer = 0;
-				DropRandomInventoryItem();
+				DropTimer++;
+				if (DropTimer >= DropIntervalTicks)
+				{
+					DropTimer = 0;
+					DropRandomInventoryItem();
+				}
 			}
 
 			// Feature 12: Random tripping while running on the ground
-			CheckTripping();
+			// Server-authoritative: prevents each client rolling independently
+			// and firing the trip at different times.
+			if (Main.netMode != NetmodeID.MultiplayerClient)
+			{
+				CheckTripping();
+			}
 		}
 
 		private void DropRandomInventoryItem()
@@ -105,14 +116,22 @@ namespace DCimpossible.Common.Players
 				Item itemToDrop = Player.inventory[slot].Clone();
 				Player.inventory[slot].TurnToAir();
 
+				// QuickSpawnItem is preferred for player drops:
+				// it sets the correct noGrabDelay and auto-syncs to all clients in MP.
 				Player.QuickSpawnItem(Player.GetSource_DropAsItem(), itemToDrop, itemToDrop.stack);
 				SoundEngine.PlaySound(SoundID.Item16, Player.position);
-				Main.NewText($"Your clumsy hands slipped! You dropped your entire stack of {itemToDrop.Name}!", Color.OrangeRed);
 
-				if (Main.netMode == NetmodeID.Server || Main.netMode == NetmodeID.MultiplayerClient)
+				// Sync the cleared inventory slot to all clients.
+				// MessageID.SyncEquipment is the correct message for Player.inventory[] slots.
+				// number = player whoAmI, number2 = slot index (must be float).
+				if (Main.netMode == NetmodeID.Server)
 				{
-					NetMessage.SendData(MessageID.SyncEquipment, -1, -1, null, Player.whoAmI, slot);
+					NetMessage.SendData(MessageID.SyncEquipment, -1, -1, null, Player.whoAmI, (float)slot);
 				}
+
+				WorldEventSystem.BroadcastMessage(
+					$"[{Player.name}] Clumsy hands! Dropped an entire stack of {itemToDrop.Name}!",
+					Color.OrangeRed);
 			}
 		}
 
@@ -131,22 +150,34 @@ namespace DCimpossible.Common.Players
 
 		private void TriggerTrip()
 		{
-			// Stumble physics
+			// Stumble physics — the server sets velocity which is synced to the client
+			// via the normal player position/velocity sync packets.
 			Player.velocity = new Vector2(-Player.direction * 5f, -3.5f);
 			SoundEngine.PlaySound(SoundID.DoubleJump, Player.position);
 			SoundEngine.PlaySound(SoundID.Shatter, Player.position);
 
-			// Wipe inventory, coins (slots 50-53), and ammo (slots 54-57)
+			// Drop all inventory, coin (50-53) and ammo (54-57) slots as world items.
+			// QuickSpawnItem handles noGrabDelay and auto-syncs the spawned entity to clients.
 			for (int i = 0; i < 58; i++)
 			{
-				Player.inventory[i].TurnToAir();
-				if (Main.netMode == NetmodeID.Server || Main.netMode == NetmodeID.MultiplayerClient)
+				Item inv = Player.inventory[i];
+				if (!inv.IsAir && inv.stack > 0)
 				{
-					NetMessage.SendData(MessageID.SyncEquipment, -1, -1, null, Player.whoAmI, i);
+					Player.QuickSpawnItem(Player.GetSource_DropAsItem(), inv, inv.stack);
+					Player.inventory[i].TurnToAir();
+
+					// Sync the cleared slot to all clients.
+					// number2 must be cast to float for the SyncEquipment message.
+					if (Main.netMode == NetmodeID.Server)
+					{
+						NetMessage.SendData(MessageID.SyncEquipment, -1, -1, null, Player.whoAmI, (float)i);
+					}
 				}
 			}
 
-			Main.NewText("YOU TRIPPED! You took a violent tumble and lost EVERYTHING in your inventory, including all coins!", Color.Red);
+			WorldEventSystem.BroadcastMessage(
+				$"[{Player.name}] TRIPPED and scattered EVERYTHING from their inventory!",
+				Color.Red);
 		}
 	}
 }

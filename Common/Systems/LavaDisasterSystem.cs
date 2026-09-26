@@ -19,17 +19,17 @@ namespace DCimpossible.Common.Systems
 
 			// Handle Lava Rain disaster
 			UpdateLavaRain();
-
-			// Handle Lava Tsunami disaster
-			UpdateLavaTsunami();
 		}
 
 		private static void UpdateLavaRain()
 		{
 			if (!LavaRainActive)
 			{
-				// 1 in 18,000 chance per tick (~every 5 minutes)
-				if (Main.rand.Next(18000) == 0)
+				// 10-day grace period: lava rain can't start before day 11
+				if (WorldEventSystem.DayCounter <= 10) return;
+
+				// 1 in 72000 chance per tick (~every 20 minutes)
+				if (Main.rand.Next(72000) == 0)
 				{
 					LavaRainActive = true;
 					LavaRainTimeLeft = Main.rand.Next(3600, 7200); // 1-2 minutes
@@ -77,46 +77,5 @@ namespace DCimpossible.Common.Systems
 				}
 			}
 		}
-
-		private static void UpdateLavaTsunami()
-		{
-			// 1 in 24,000 chance per tick (~every 6.6 minutes)
-			if (Main.rand.Next(24000) == 0)
-			{
-				WorldEventSystem.BroadcastMessage("WARNING: A COLOSSAL LAVA TSUNAMI IS SWEEPING ACROSS THE LAND!", Color.Red);
-
-				foreach (Player player in Main.player)
-				{
-					if (!player.active || player.dead) continue;
-
-					int direction = Main.rand.NextBool() ? 1 : -1;
-					float startX = player.Center.X - (direction * 1100f);
-					float startY = player.Center.Y - 30f;
-					Vector2 velocity = new Vector2(direction * 13f, 0f);
-
-					// Tower of 3 wave segments spanning vertically
-					for (int i = 0; i < 3; i++)
-					{
-						int proj = Projectile.NewProjectile(
-							new EntitySource_WorldEvent(),
-							startX,
-							startY - (i * 130f),
-							velocity.X,
-							velocity.Y,
-							ModContent.ProjectileType<LavaTsunamiWave>(),
-							300,
-							8f,
-							Main.myPlayer
-						);
-						if (Main.netMode == NetmodeID.Server && proj < Main.maxProjectiles)
-						{
-							NetMessage.SendData(MessageID.SyncProjectile, -1, -1, null, proj);
-						}
-					}
-					break; // Spawn 1 tsunami wave per event
-				}
-			}
-		}
 	}
 }
-

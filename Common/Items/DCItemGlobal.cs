@@ -6,6 +6,7 @@ using Terraria.Audio;
 using Terraria.DataStructures;
 using Terraria.ID;
 using Terraria.ModLoader;
+using DCimpossible.Common.Systems;
 
 namespace DCimpossible.Common.Items
 {
@@ -22,7 +23,7 @@ namespace DCimpossible.Common.Items
 
 		public override void OnSpawn(Item item, IEntitySource source)
 		{
-			// Feature 10: EVERY drop in game is 1% chance or less, including boss drops
+			// Feature 10: EVERY drop in game is 20% chance or less, including boss drops
 			// Only gate actual world drops (NPC loot, boss bags, tile breaks, trees, crates)
 			// Do NOT delete player's manual drops or 5-min fumble drops
 			if (source is EntitySource_Loot ||
@@ -34,7 +35,7 @@ namespace DCimpossible.Common.Items
 				source is EntitySource_BossSpawn)
 			{
 				// 99% chance to turn to air (1% drop rate or less)
-				if (Main.rand.Next(100) != 0)
+				if (Main.rand.Next(100) >= 20)
 				{
 					item.TurnToAir();
 					item.active = false;
@@ -59,8 +60,12 @@ namespace DCimpossible.Common.Items
 			// Feature 15: Tools have a chance to break
 			if (item.pick > 0 || item.axe > 0 || item.hammer > 0)
 			{
-				// 1 in 150 chance per swing (~0.67%)
-				if (Main.rand.Next(150) == 0)
+				// 2-day grace period: tools can't break before day 3
+				if (WorldEventSystem.DayCounter <= 2)
+					return base.UseItem(item, player);
+
+				// 1 in 1000 chance per swing (~0.001%)
+				if (Main.rand.Next(1000) == 0)
 				{
 					string toolName = item.Name;
 					item.TurnToAir();

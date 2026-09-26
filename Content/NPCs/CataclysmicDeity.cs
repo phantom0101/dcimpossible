@@ -8,7 +8,6 @@ using Terraria.ModLoader;
 
 namespace DCimpossible.Content.NPCs
 {
-	[AutoloadBossHead]
 	public class CataclysmicDeity : ModNPC
 	{
 		public override string Texture => "Terraria/Images/NPC_398"; // Moon Lord Core texture base
